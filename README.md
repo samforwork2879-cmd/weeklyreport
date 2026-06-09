@@ -28,9 +28,28 @@ python app.py
 
 瀏覽器開啟 `http://127.0.0.1:5000`
 
+## Google Sheets 儲存週報
+
+預設仍使用本機 `weekly_reports.db`。若要把週報儲存到 Google Sheets，請設定以下環境變數：
+
+```bash
+GOOGLE_APPLICATION_CREDENTIALS=google-service-account.json
+GOOGLE_SHEETS_REPORTS_SPREADSHEET_ID=你的試算表 ID
+GOOGLE_SHEETS_REPORTS_WORKSHEET=reports
+```
+
+設定步驟：
+
+1. 到 Google Cloud 建立 Service Account，下載 JSON 金鑰。
+2. 將 JSON 放在專案資料夾，例如 `google-service-account.json`。
+3. 在 Google Sheets 將試算表分享給 Service Account 的 email，權限設為編輯者。
+4. 安裝依賴後啟動網站：`pip install -r requirements.txt`、`python app.py`。
+
+啟用後，週報的新增、修改、刪除、搜尋、標籤管理、Dashboard 與匯出會使用 Google Sheets。內容模板、草稿與附件仍保留在本機 SQLite / uploads。
+
 ## 結構
 
-- `app.py`: Flask 主程式 + SQLite CRUD + 搜尋
+- `app.py`: Flask 主程式 + 週報儲存 + 搜尋
 - `templates/`: 頁面模板
 - `static/`: CSS / JS
 - `weekly_reports.db`: 首次啟動後自動建立

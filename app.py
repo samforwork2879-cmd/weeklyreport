@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import re
 import sqlite3
 from collections import Counter, defaultdict
@@ -32,6 +33,12 @@ UPLOAD_DIR = BASE_DIR / "uploads"
 WORKSTATIONS_PATH = BASE_DIR / "workstations.json"
 LAPP_SNIPPET_DIR = BASE_DIR.parent / "lapp" / "snippets"
 LAPP_CUSTOM_SNIPPET_FILE = LAPP_SNIPPET_DIR / "custom.json"
+GOOGLE_SHEETS_REPORT_HEADERS = ["id", "title", "week_start", "content_md", "tags", "created_at", "updated_at"]
+
+if find_spec("dotenv") is not None:
+    from dotenv import load_dotenv
+
+    load_dotenv(BASE_DIR / ".env")
 
 ALLOWED_TAGS = {
     "p",
@@ -65,7 +72,7 @@ ALLOWED_ATTRIBUTES = {"a": ["href", "title", "target", "rel"]}
 
 def create_app() -> Flask:
     app = Flask(__name__)
-    app.config["SECRET_KEY"] = "dev-change-me"
+    app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-change-me")
     app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
 
     @app.before_request
@@ -346,25 +353,10 @@ def create_app() -> Flask:
                     custom_tags=form["custom_tags"],
                 )
 
-            now = datetime.now().isoformat(timespec="seconds")
-            cursor = g.db.execute(
-                """
-                INSERT INTO reports (title, week_start, content_md, tags, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    form["title"],
-                    form["week_start"],
-                    form["content_md"],
-                    normalize_tags(form["tags"]),
-                    now,
-                    now,
-                ),
-            )
-            report_id = cursor.lastrowid
+            report_id = create_report_record(form)
             save_uploaded_attachments(report_id, request.files.getlist("attachments"))
-            g.db.commit()
             clear_draft_data()
+            g.db.commit()
 
             flash("週報已新增", "success")
             return redirect(url_for("index"))
@@ -425,21 +417,7 @@ def create_app() -> Flask:
                     custom_tags=form["custom_tags"],
                 )
 
-            g.db.execute(
-                """
-                UPDATE reports
-                SET title = ?, week_start = ?, content_md = ?, tags = ?, updated_at = ?
-                WHERE id = ?
-                """,
-                (
-                    form["title"],
-                    form["week_start"],
-                    form["content_md"],
-                    normalize_tags(form["tags"]),
-                    datetime.now().isoformat(timespec="seconds"),
-                    report_id,
-                ),
-            )
+            update_report_record(report_id, form)
             save_uploaded_attachments(report_id, request.files.getlist("attachments"))
             g.db.commit()
             flash("週報已更新", "success")
@@ -479,7 +457,7 @@ def create_app() -> Flask:
             delete_attachment_file(attachment)
 
         g.db.execute("DELETE FROM attachments WHERE report_id = ?", (report_id,))
-        g.db.execute("DELETE FROM reports WHERE id = ?", (report_id,))
+        delete_report_record(report_id)
         g.db.commit()
         flash("週報已刪除", "success")
         return redirect(url_for("index"))
@@ -741,12 +719,205 @@ def ensure_template_columns(conn: sqlite3.Connection) -> None:
         conn.execute("ALTER TABLE report_templates ADD COLUMN is_default INTEGER DEFAULT 0")
 
 
+def use_google_sheets_reports() -> bool:
+    return bool(os.environ.get("GOOGLE_SHEETS_REPORTS_SPREADSHEET_ID", "").strip())
+
+
+def get_reports_worksheet():
+    if "reports_worksheet" in g:
+        return g.reports_worksheet
+
+    credentials_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "").strip()
+    spreadsheet_id = os.environ.get("GOOGLE_SHEETS_REPORTS_SPREADSHEET_ID", "").strip()
+    worksheet_name = os.environ.get("GOOGLE_SHEETS_REPORTS_WORKSHEET", "reports").strip() or "reports"
+
+    if not credentials_path:
+        raise RuntimeError("缺少 GOOGLE_APPLICATION_CREDENTIALS，無法連線 Google Sheets")
+    if not spreadsheet_id:
+        raise RuntimeError("缺少 GOOGLE_SHEETS_REPORTS_SPREADSHEET_ID，無法連線 Google Sheets")
+
+    try:
+        import gspread
+        from gspread.exceptions import WorksheetNotFound
+    except ImportError as exc:
+        raise RuntimeError("缺少 gspread 套件，請先安裝 requirements.txt") from exc
+
+    client = gspread.service_account(filename=credentials_path)
+    spreadsheet = client.open_by_key(spreadsheet_id)
+    try:
+        worksheet = spreadsheet.worksheet(worksheet_name)
+    except WorksheetNotFound:
+        worksheet = spreadsheet.add_worksheet(title=worksheet_name, rows=1000, cols=len(GOOGLE_SHEETS_REPORT_HEADERS))
+
+    ensure_reports_worksheet_headers(worksheet)
+    g.reports_worksheet = worksheet
+    return worksheet
+
+
+def ensure_reports_worksheet_headers(worksheet) -> None:
+    headers = worksheet.row_values(1)
+    if headers[: len(GOOGLE_SHEETS_REPORT_HEADERS)] == GOOGLE_SHEETS_REPORT_HEADERS:
+        return
+    worksheet.update("A1:G1", [GOOGLE_SHEETS_REPORT_HEADERS])
+
+
+def load_sheet_report_rows() -> list[dict]:
+    worksheet = get_reports_worksheet()
+    rows = worksheet.get_all_records(expected_headers=GOOGLE_SHEETS_REPORT_HEADERS)
+    normalized: list[dict] = []
+    for row in rows:
+        report_id = str(row.get("id", "")).strip()
+        if not report_id:
+            continue
+        try:
+            report_id_value = int(report_id)
+        except ValueError:
+            continue
+        normalized.append(
+            {
+                "id": report_id_value,
+                "title": str(row.get("title", "")).strip(),
+                "week_start": str(row.get("week_start", "")).strip(),
+                "content_md": str(row.get("content_md", "")).strip(),
+                "tags": str(row.get("tags", "")).strip(),
+                "created_at": str(row.get("created_at", "")).strip(),
+                "updated_at": str(row.get("updated_at", "")).strip(),
+            }
+        )
+    return normalized
+
+
+def find_sheet_row_number(report_id: int) -> int | None:
+    worksheet = get_reports_worksheet()
+    id_values = worksheet.col_values(1)
+    for row_number, value in enumerate(id_values[1:], start=2):
+        if str(value).strip() == str(report_id):
+            return row_number
+    return None
+
+
+def create_report_record(form: dict[str, object]) -> int:
+    now = datetime.now().isoformat(timespec="seconds")
+    if use_google_sheets_reports():
+        worksheet = get_reports_worksheet()
+        existing_ids = [row["id"] for row in load_sheet_report_rows()]
+        report_id = max(existing_ids, default=0) + 1
+        worksheet.append_row(
+            [
+                report_id,
+                form["title"],
+                form["week_start"],
+                form["content_md"],
+                normalize_tags(form["tags"]),
+                now,
+                now,
+            ],
+            value_input_option="USER_ENTERED",
+        )
+        return report_id
+
+    cursor = g.db.execute(
+        """
+        INSERT INTO reports (title, week_start, content_md, tags, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            form["title"],
+            form["week_start"],
+            form["content_md"],
+            normalize_tags(form["tags"]),
+            now,
+            now,
+        ),
+    )
+    return cursor.lastrowid
+
+
+def update_report_record(report_id: int, form: dict[str, object]) -> bool:
+    now = datetime.now().isoformat(timespec="seconds")
+    if use_google_sheets_reports():
+        report = get_report(report_id)
+        if report is None:
+            return False
+        row_number = find_sheet_row_number(report_id)
+        if row_number is None:
+            return False
+        get_reports_worksheet().update(
+            f"A{row_number}:G{row_number}",
+            [
+                [
+                    report_id,
+                    form["title"],
+                    form["week_start"],
+                    form["content_md"],
+                    normalize_tags(form["tags"]),
+                    report["created_at"],
+                    now,
+                ]
+            ],
+        )
+        return True
+
+    g.db.execute(
+        """
+        UPDATE reports
+        SET title = ?, week_start = ?, content_md = ?, tags = ?, updated_at = ?
+        WHERE id = ?
+        """,
+        (
+            form["title"],
+            form["week_start"],
+            form["content_md"],
+            normalize_tags(form["tags"]),
+            now,
+            report_id,
+        ),
+    )
+    return True
+
+
+def delete_report_record(report_id: int) -> bool:
+    if use_google_sheets_reports():
+        row_number = find_sheet_row_number(report_id)
+        if row_number is None:
+            return False
+        get_reports_worksheet().delete_rows(row_number)
+        return True
+
+    g.db.execute("DELETE FROM reports WHERE id = ?", (report_id,))
+    return True
+
+
 def query_reports(
     keyword: str = "",
     tag: str = "",
     start_date: str = "",
     end_date: str = "",
 ) -> list[dict]:
+    if use_google_sheets_reports():
+        keyword_lc = keyword.lower()
+        reports = [enrich_report(row) for row in load_sheet_report_rows()]
+        if keyword_lc:
+            reports = [
+                row
+                for row in reports
+                if keyword_lc in row["title"].lower()
+                or keyword_lc in row["content_md"].lower()
+                or keyword_lc in row["tags"].lower()
+            ]
+        if start_date:
+            reports = [row for row in reports if row["week_start"] >= start_date]
+        if end_date:
+            reports = [row for row in reports if row["week_start"] <= end_date]
+        if tag:
+            reports = [row for row in reports if tag in row["tags_list"]]
+        reports.sort(key=lambda row: (row["week_start"], row["updated_at"]), reverse=True)
+
+        attachment_map = get_attachments_map([row["id"] for row in reports])
+        for row in reports:
+            row["attachments"] = attachment_map.get(row["id"], [])
+        return reports
+
     sql = "SELECT * FROM reports WHERE 1=1"
     params: list[str] = []
     if keyword:
@@ -773,6 +944,14 @@ def query_reports(
 
 
 def get_report(report_id: int) -> dict | None:
+    if use_google_sheets_reports():
+        report = next((row for row in load_sheet_report_rows() if row["id"] == report_id), None)
+        if report is None:
+            return None
+        report = enrich_report(report)
+        report["attachments"] = query_attachments_by_report(report_id)
+        return report
+
     row = g.db.execute("SELECT * FROM reports WHERE id = ?", (report_id,)).fetchone()
     if row is None:
         return None
@@ -977,6 +1156,13 @@ def delete_attachment_file(attachment: dict) -> None:
 
 
 def get_tag_counts(limit: int | None = None) -> list[tuple[str, int]]:
+    if use_google_sheets_reports():
+        rows = load_sheet_report_rows()
+        counter: Counter[str] = Counter()
+        for row in rows:
+            counter.update(parse_tags(row["tags"]))
+        return counter.most_common(limit) if limit else counter.most_common()
+
     rows = g.db.execute("SELECT tags FROM reports").fetchall()
     counter: Counter[str] = Counter()
     for row in rows:
@@ -990,6 +1176,25 @@ def get_all_tags() -> list[str]:
 
 
 def apply_tag_rename(old_tag: str, new_tag: str) -> int:
+    if use_google_sheets_reports():
+        changed = 0
+        for row in load_sheet_report_rows():
+            tags = parse_tags(row["tags"])
+            replaced = [new_tag if tag == old_tag else tag for tag in tags]
+            if replaced == tags:
+                continue
+            update_report_record(
+                row["id"],
+                {
+                    "title": row["title"],
+                    "week_start": row["week_start"],
+                    "content_md": row["content_md"],
+                    "tags": normalize_tags(", ".join(replaced)),
+                },
+            )
+            changed += 1
+        return changed
+
     changed = 0
     rows = g.db.execute("SELECT id, tags FROM reports").fetchall()
     for row in rows:
@@ -1010,6 +1215,25 @@ def apply_tag_rename(old_tag: str, new_tag: str) -> int:
 
 
 def apply_tag_delete(tag: str) -> int:
+    if use_google_sheets_reports():
+        changed = 0
+        for row in load_sheet_report_rows():
+            tags = parse_tags(row["tags"])
+            filtered = [item for item in tags if item != tag]
+            if filtered == tags:
+                continue
+            update_report_record(
+                row["id"],
+                {
+                    "title": row["title"],
+                    "week_start": row["week_start"],
+                    "content_md": row["content_md"],
+                    "tags": normalize_tags(", ".join(filtered)),
+                },
+            )
+            changed += 1
+        return changed
+
     changed = 0
     rows = g.db.execute("SELECT id, tags FROM reports").fetchall()
     for row in rows:
@@ -1030,6 +1254,37 @@ def apply_tag_delete(tag: str) -> int:
 
 
 def get_dashboard_stats() -> dict:
+    if use_google_sheets_reports():
+        reports = load_sheet_report_rows()
+        total_templates = g.db.execute("SELECT COUNT(*) AS cnt FROM report_templates").fetchone()["cnt"]
+        total_attachments = g.db.execute("SELECT COUNT(*) AS cnt FROM attachments").fetchone()["cnt"]
+        current_month = datetime.now().strftime("%Y-%m")
+        reports_this_month = len([row for row in reports if row["week_start"].startswith(current_month)])
+
+        weekly_counter: Counter[str] = Counter()
+        for row in reports:
+            try:
+                week_key = datetime.fromisoformat(row["week_start"]).strftime("%Y-W%W")
+            except ValueError:
+                week_key = row["week_start"]
+            weekly_counter[week_key] += 1
+        weekly_counts = [
+            {"week_key": week_key, "cnt": count}
+            for week_key, count in sorted(weekly_counter.items(), reverse=True)[:8]
+        ]
+        weekly_counts.reverse()
+        max_weekly = max((row["cnt"] for row in weekly_counts), default=1)
+
+        return {
+            "total_reports": len(reports),
+            "total_templates": total_templates,
+            "total_attachments": total_attachments,
+            "reports_this_month": reports_this_month,
+            "top_tags": get_tag_counts(limit=8),
+            "weekly_counts": weekly_counts,
+            "max_weekly": max_weekly,
+        }
+
     total_reports = g.db.execute("SELECT COUNT(*) AS cnt FROM reports").fetchone()["cnt"]
     total_templates = g.db.execute("SELECT COUNT(*) AS cnt FROM report_templates").fetchone()["cnt"]
     total_attachments = g.db.execute("SELECT COUNT(*) AS cnt FROM attachments").fetchone()["cnt"]

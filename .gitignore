@@ -159,6 +159,10 @@ ENV/
 env.bak/
 venv.bak/
 
+# Google service account credentials
+google-service-account*.json
+service-account*.json
+
 # Spyder project settings
 .spyderproject
 .spyproject
