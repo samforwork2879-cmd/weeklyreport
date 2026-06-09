@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}編輯模板 | 工作週報紀錄{% endblock %}
+{% block content %}
+<section class="form-wrap">
+  <h2>編輯模板</h2>
+  <form method="post" action="{{ url_for('edit_template', template_id=template.id) }}" class="report-form">
+    <label>
+      模板名稱
+      <input type="text" name="name" required value="{{ template.name }}" />
+    </label>
+    <label>
+      模板分類
+      <input type="text" name="category" value="{{ template.category }}" />
+    </label>
+    <label>
+      模板內容（Markdown）
+      <textarea name="content_md" rows="14" required>{{ template.content_md }}</textarea>
+    </label>
+    <label class="inline-check">
+      <input type="checkbox" name="is_default" {% if template.is_default %}checked{% endif %} />
+      設為預設模板
+    </label>
+    <div class="actions">
+      <button type="submit" class="btn">儲存模板</button>
+      <a class="btn" href="{{ url_for('manage_templates') }}">返回模板管理</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

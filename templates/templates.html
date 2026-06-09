@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}模板管理 | 工作週報紀錄{% endblock %}
+{% block content %}
+<section class="form-wrap">
+  <h2>新增模板</h2>
+  <form method="post" action="{{ url_for('manage_templates') }}" class="report-form">
+    <label>
+      模板名稱
+      <input type="text" name="name" required placeholder="例如：開發週報模板" />
+    </label>
+    <label>
+      模板分類
+      <input type="text" name="category" placeholder="例如：研發、維運、管理" />
+    </label>
+    <label>
+      模板內容（Markdown）
+      <textarea name="content_md" rows="10" required placeholder="# 本週目標&#10;- ...&#10;&#10;# 本週成果&#10;- ..."></textarea>
+    </label>
+    <label class="inline-check">
+      <input type="checkbox" name="is_default" />
+      設為預設模板
+    </label>
+    <div class="actions">
+      <button type="submit" class="btn">新增模板</button>
+    </div>
+  </form>
+</section>
+
+<section class="template-list-wrap">
+  <h2>現有模板</h2>
+  {% if templates %}
+    <div class="template-list">
+      {% for tpl in templates %}
+      <article class="card">
+        <div class="card-head">
+          <h3>{{ tpl.name }}</h3>
+          {% if tpl.is_default %}
+            <span class="tag">預設</span>
+          {% endif %}
+        </div>
+        <div class="date">分類：{{ tpl.category if tpl.category else '未分類' }}</div>
+        <pre class="template-preview">{{ tpl.content_md }}</pre>
+        <div class="actions">
+          <a class="btn" href="{{ url_for('edit_template', template_id=tpl.id) }}">編輯</a>
+          <form method="post" action="{{ url_for('delete_template', template_id=tpl.id) }}" onsubmit="return confirm('確定刪除此模板？');">
+            <button type="submit" class="btn danger">刪除</button>
+          </form>
+        </div>
+      </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="empty">目前尚無模板，先新增一個模板即可在「新增週報」時套用。</p>
+  {% endif %}
+</section>
+{% endblock %}

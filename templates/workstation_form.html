@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}編輯工作站 | 工作週報紀錄{% endblock %}
+{% block content %}
+<section class="form-wrap">
+  <h2>編輯工作站</h2>
+  <form method="post" action="{{ url_for('edit_workstation', station_id=station_id) }}" class="report-form">
+    <label>
+      工作站名稱
+      <input type="text" name="name" required value="{{ station.name }}" />
+    </label>
+    <label>
+      網址
+      <input type="url" name="url" required value="{{ station.url }}" />
+    </label>
+    <label>
+      Icon 網址（可空白）
+      <input type="url" name="icon" value="{{ station.icon }}" placeholder="https://..." />
+    </label>
+    <label>
+      簡介
+      <textarea name="description" rows="4" placeholder="例如：維運相關管理後台">{{ station.description }}</textarea>
+    </label>
+    <label>
+      工作項目（每行一項）
+      <textarea name="work_items" rows="8" placeholder="例：&#10;檢查服務狀態&#10;處理異常單據&#10;回覆使用者問題">{{ station.work_items_text }}</textarea>
+    </label>
+    <div class="actions">
+      <button type="submit" class="btn">儲存</button>
+      <a class="btn" href="{{ url_for('manage_workstations') }}">返回工作站編輯</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

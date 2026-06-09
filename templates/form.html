@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% if action == 'new' %}
+  {% set page_title = '新增週報' %}
+{% else %}
+  {% set page_title = '修改週報' %}
+{% endif %}
+{% block title %}{{ page_title }} | 工作週報紀錄{% endblock %}
+{% block content %}
+<section class="form-wrap">
+  <h2>{{ page_title }}</h2>
+
+  {% if action == 'new' %}
+    <form method="post" action="{{ url_for('create_report') }}" class="report-form" data-preview-url="{{ url_for('preview_markdown') }}" data-draft-save-url="{{ url_for('save_draft') }}" data-draft-clear-url="{{ url_for('clear_draft_route') }}" data-report-id="new" enctype="multipart/form-data">
+  {% else %}
+    <form method="post" action="{{ url_for('edit_report', report_id=report_id) }}" class="report-form" data-preview-url="{{ url_for('preview_markdown') }}" data-report-id="{{ report_id }}" enctype="multipart/form-data">
+  {% endif %}
+      {% if action == 'new' %}
+      <section class="draft-bar">
+        <div class="draft-meta">
+          {% if draft %}
+            已載入上次草稿（{{ draft.updated_at }}）
+          {% else %}
+            內容會自動儲存草稿（瀏覽器 + 伺服器）
+          {% endif %}
+        </div>
+        <button type="button" class="btn danger" id="clear-draft-btn">清除草稿</button>
+      </section>
+      {% endif %}
+
+      <label>
+        標題
+        <input id="field-title" type="text" name="title" required value="{{ form.title }}" placeholder="例如：2026 第 6 週進度" />
+      </label>
+
+      <label>
+        週次起始日期
+        <input id="field-week-start" type="date" name="week_start" required value="{{ form.week_start }}" />
+      </label>
+
+      <section class="tag-picker">
+        <label>
+          已有標籤（可多選）
+          <div id="field-selected-tags" class="tag-checkbox-grid">
+            {% for tag_name in available_tags %}
+              <label class="tag-check-item">
+                <input type="checkbox" name="selected_tags" value="{{ tag_name }}" {% if tag_name in selected_tags %}checked{% endif %} />
+                <span>{{ tag_name }}</span>
+              </label>
+            {% endfor %}
+          </div>
+        </label>
+        <label>
+          新標籤（若沒有可手動輸入，逗號分隔）
+          <input id="field-custom-tags" type="text" name="custom_tags" value="{{ custom_tags }}" placeholder="例如：跨部門, 緊急修復" />
+        </label>
+        <input id="field-tags" type="hidden" name="tags" value="{{ form.tags }}" />
+      </section>
+
+      {% if action == 'new' %}
+      <section class="template-picker">
+        <div class="template-picker-head">
+          <label for="template-select">套用內容模板</label>
+          <a class="btn" href="{{ url_for('manage_templates') }}">管理模板</a>
+        </div>
+        <div class="template-picker-row">
+          <select id="template-select">
+            <option value="">請選擇模板</option>
+            {% for tpl in templates %}
+              <option value="{{ tpl.id }}" {% if tpl.is_default %}selected{% endif %}>{{ tpl.name }}</option>
+            {% endfor %}
+          </select>
+          <button type="button" class="btn" id="apply-template-btn">套用模板</button>
+        </div>
+        <script id="report-templates-data" type="application/json">{{ templates_payload|tojson }}</script>
+      </section>
+      {% endif %}
+
+      <label>
+        附件（可多選）
+        <input type="file" name="attachments" multiple />
+      </label>
+
+      {% if attachments %}
+      <section class="attachment-list">
+        <h3>現有附件</h3>
+        {% for file in attachments %}
+          <div class="attachment-item">
+            <a href="{{ url_for('download_attachment', attachment_id=file.id) }}">{{ file.original_name }}</a>
+            {% if action == 'edit' %}
+              <button
+                type="submit"
+                class="btn danger"
+                formaction="{{ url_for('delete_attachment', attachment_id=file.id) }}"
+                formmethod="post"
+                formnovalidate
+                onclick="return confirm('確定刪除附件？');"
+              >
+                刪除
+              </button>
+            {% endif %}
+          </div>
+        {% endfor %}
+      </section>
+      {% endif %}
+
+      <div class="editor-shell" data-mode="both">
+        <div class="editor-topbar">
+          <div class="editor-tabs" role="tablist" aria-label="Markdown 編輯模式">
+            <button type="button" class="editor-tab is-active" data-mode="edit" role="tab">編輯</button>
+            <button type="button" class="editor-tab" data-mode="preview" role="tab">預覽</button>
+            <button type="button" class="editor-tab" data-mode="both" role="tab">雙欄</button>
+          </div>
+          <div class="editor-meta">Markdown</div>
+        </div>
+        <div class="editor-body">
+          <section class="editor-pane editor-pane--editor">
+            <label class="editor-label" for="content-md-input">內容（Markdown）</label>
+            <textarea id="content-md-input" name="content_md" rows="14" required placeholder="# 本週重點&#10;- 完成 ...&#10;- 待處理 ...">{{ form.content_md }}</textarea>
+          </section>
+          <section class="editor-pane editor-pane--preview">
+            <div class="editor-label-row">
+              <span>預覽</span>
+              <span class="editor-hint">即時更新</span>
+            </div>
+            <div id="markdown-preview" class="markdown-body markdown-preview"></div>
+          </section>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button type="submit" class="btn">儲存</button>
+        <a class="btn" href="{{ url_for('index') }}">返回首頁</a>
+      </div>
+    </form>
+</section>
+{% endblock %}

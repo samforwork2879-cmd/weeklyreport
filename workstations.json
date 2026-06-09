@@ -1,0 +1,93 @@
+[
+  {
+    "name": "CVS APP 管理平台",
+    "url": "http://10.35.2.123:8082/",
+    "icon": "",
+    "description": "聯柏人員進行各項目維護與資料查閱的平台",
+    "work_items": [
+      "解決使用者問題",
+      "維護主檔維護、通路檔案照片下載、主任稽核、訪店目標、量販基本資料等項目"
+    ]
+  },
+  {
+    "name": "物流退貨測試",
+    "url": "http://172.16.1.166:8081/Login.aspx",
+    "icon": "",
+    "description": "",
+    "work_items": []
+  },
+  {
+    "name": "物流進貨測試",
+    "url": "http://172.16.1.166:8081/Purchase_Login.aspx",
+    "icon": "",
+    "description": "",
+    "work_items": []
+  },
+  {
+    "name": "物流退貨正式",
+    "url": "http://172.16.1.166:8080/Login.aspx",
+    "icon": "",
+    "description": "",
+    "work_items": []
+  },
+  {
+    "name": "物流進貨正式",
+    "url": "http://172.16.1.166:8080/Purchase_Login.aspx",
+    "icon": "",
+    "description": "",
+    "work_items": []
+  },
+  {
+    "name": "訂單系統LINE開發者介面",
+    "url": "https://developers.line.biz/console/channel/2006969907",
+    "icon": "",
+    "description": "訂單系統訊息發送介面",
+    "work_items": [
+      "協助人員進行LINE驗證"
+    ]
+  },
+  {
+    "name": "南聯行銷督導系統 測試",
+    "url": "http://10.35.2.111/nanlienUAT/Login.aspx",
+    "icon": "",
+    "description": "",
+    "work_items": []
+  },
+  {
+    "name": "南聯行銷督導系統 正式",
+    "url": "http://10.35.2.112/Nanlien/Login.aspx",
+    "icon": "",
+    "description": "",
+    "work_items": []
+  },
+  {
+    "name": "南聯督導APP後台管理系統 正式",
+    "url": "http://210.68.97.114:500/NICCM/Account/Login?ReturnUrl=%2FNICCM%2FAccount%2FLogOff",
+    "icon": "",
+    "description": "",
+    "work_items": []
+  },
+  {
+    "name": "南聯銷售管理系統 正式",
+    "url": "http://10.35.2.113/NanLienSMS/Account/Login?ReturnUrl=%2FNanLienSMS%2FAnnouncement",
+    "icon": "",
+    "description": "",
+    "work_items": []
+  },
+  {
+    "name": "運費管理系統 正式",
+    "url": "http://10.35.2.123:8787/Login",
+    "icon": "",
+    "description": "運費計算與統計平台",
+    "work_items": [
+      "調整上傳試算表防呆"
+    ]
+  },
+  {
+    "name": "線上費用與考勤申請系統 正式",
+    "url": "http://210.68.97.210:8888/login",
+    "icon": "",
+    "description": "",
+    "work_items": []
+  }
+]

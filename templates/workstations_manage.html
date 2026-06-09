@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}工作站編輯 | 工作週報紀錄{% endblock %}
+{% block content %}
+<section class="form-wrap">
+  <h2>工作站編輯</h2>
+  <p class="empty">可編輯每個工作站的簡介與工作項目。</p>
+</section>
+
+<section class="workstation-grid">
+  {% for station in stations %}
+    <article class="workstation-card workstation-manage-card">
+      <h3>{{ station.name }}</h3>
+      <p class="workstation-manage-url">{{ station.url }}</p>
+      <p class="workstation-manage-desc">{{ station.description if station.description else '尚未填寫簡介' }}</p>
+      <div class="actions">
+        <a class="btn" href="{{ url_for('edit_workstation', station_id=station.id) }}">編輯</a>
+      </div>
+    </article>
+  {% endfor %}
+</section>
+{% endblock %}

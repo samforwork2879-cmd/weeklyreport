@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}儀表板 | 工作週報紀錄{% endblock %}
+{% block content %}
+<section class="stats-grid">
+  <article class="stat-card">
+    <div class="stat-label">週報總數</div>
+    <div class="stat-value">{{ stats.total_reports }}</div>
+  </article>
+  <article class="stat-card">
+    <div class="stat-label">本月週報</div>
+    <div class="stat-value">{{ stats.reports_this_month }}</div>
+  </article>
+  <article class="stat-card">
+    <div class="stat-label">模板總數</div>
+    <div class="stat-value">{{ stats.total_templates }}</div>
+  </article>
+  <article class="stat-card">
+    <div class="stat-label">附件總數</div>
+    <div class="stat-value">{{ stats.total_attachments }}</div>
+  </article>
+</section>
+
+<section class="board">
+  <article class="card">
+    <h3>熱門標籤</h3>
+    <div class="tag-cloud">
+      {% for tag_name, count in stats.top_tags %}
+        <a class="tag-link" href="{{ url_for('index', tag=tag_name) }}">#{{ tag_name }} ({{ count }})</a>
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="card">
+    <h3>每週篇數趨勢</h3>
+    <div class="trend-list">
+      {% for row in stats.weekly_counts %}
+        <div class="trend-row">
+          <span class="trend-key">{{ row.week_key }}</span>
+          <div class="trend-bar">
+            <span style="width: {{ (row.cnt * 100 / stats.max_weekly)|round(0, 'ceil') }}%"></span>
+          </div>
+          <span class="trend-val">{{ row.cnt }}</span>
+        </div>
+      {% endfor %}
+    </div>
+  </article>
+</section>
+{% endblock %}

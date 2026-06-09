@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}檢視週報 | 工作週報紀錄{% endblock %}
+{% block content %}
+<section class="form-wrap">
+  <div class="card-head">
+    <h2>{{ report.title }}</h2>
+    <span class="date">週次起始: {{ report.week_start }}</span>
+  </div>
+  <div class="tags">
+    {% for tag in report.tags_list %}
+      <span class="tag">#{{ tag }}</span>
+    {% endfor %}
+  </div>
+
+  {% if report.attachments %}
+  <section class="attachment-list">
+    <h3>附件</h3>
+    {% for file in report.attachments %}
+      <div class="attachment-item">
+        <a href="{{ url_for('download_attachment', attachment_id=file.id) }}">{{ file.original_name }}</a>
+      </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  <article class="markdown-body">{{ report.content_html|safe }}</article>
+  <div class="actions">
+    <a class="btn" href="{{ url_for('export_single_report', report_id=report.id, fmt='md') }}">匯出 MD</a>
+    <a class="btn" href="{{ url_for('edit_report', report_id=report.id) }}">修改</a>
+    <a class="btn" href="{{ url_for('index') }}">返回首頁</a>
+  </div>
+</section>
+{% endblock %}

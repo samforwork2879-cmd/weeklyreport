@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}字串分組轉換工具 | 工作週報紀錄{% endblock %}
+{% block content %}
+<section class="form-wrap">
+  <h2>字串分組轉換工具</h2>
+  <form method="post" action="{{ url_for('string_group_tool') }}" class="report-form">
+    <label>
+      輸入內容
+      <textarea name="text" rows="10" placeholder="貼上要分組的字串">{{ form.text }}</textarea>
+    </label>
+
+    <div class="tool-grid">
+      <label>
+        每組大小
+        <input type="number" min="1" name="group_size" value="{{ form.group_size }}" />
+      </label>
+      <label>
+        輸入模式
+        <select name="input_mode">
+          <option value="分隔符模式" {% if form.input_mode == '分隔符模式' %}selected{% endif %}>分隔符模式</option>
+          <option value="每行一筆" {% if form.input_mode == '每行一筆' %}selected{% endif %}>每行一筆</option>
+          <option value="每行一組" {% if form.input_mode == '每行一組' %}selected{% endif %}>每行一組</option>
+        </select>
+      </label>
+      <label>
+        分隔符
+        <select name="delimiter_mode">
+          <option value="自動" {% if form.delimiter_mode == '自動' %}selected{% endif %}>自動</option>
+          <option value="逗號 (,)" {% if form.delimiter_mode == '逗號 (,)' %}selected{% endif %}>逗號 (,)</option>
+          <option value="TAB" {% if form.delimiter_mode == 'TAB' %}selected{% endif %}>TAB</option>
+          <option value="分號 (;)" {% if form.delimiter_mode == '分號 (;)' %}selected{% endif %}>分號 (;)</option>
+          <option value="空格" {% if form.delimiter_mode == '空格' %}selected{% endif %}>空格</option>
+          <option value="自訂" {% if form.delimiter_mode == '自訂' %}selected{% endif %}>自訂</option>
+        </select>
+      </label>
+      <label>
+        自訂分隔符
+        <input type="text" name="custom_delimiter" value="{{ form.custom_delimiter }}" />
+      </label>
+      <label>
+        輸出格式
+        <select name="output_mode">
+          <option value="SQL" {% if form.output_mode == 'SQL' %}selected{% endif %}>SQL</option>
+          <option value="Python" {% if form.output_mode == 'Python' %}selected{% endif %}>Python</option>
+          <option value="JSON" {% if form.output_mode == 'JSON' %}selected{% endif %}>JSON</option>
+        </select>
+      </label>
+      <label>
+        SQL 表名
+        <input type="text" name="db_name" value="{{ form.db_name }}" />
+      </label>
+      <label>
+        SQL 欄位（逗號）
+        <input type="text" name="column_names" value="{{ form.column_names }}" />
+      </label>
+      <label>
+        INSERT 模式
+        <select name="sql_insert_mode">
+          <option value="一般 INSERT" {% if form.sql_insert_mode == '一般 INSERT' %}selected{% endif %}>一般 INSERT</option>
+          <option value="INSERT IGNORE" {% if form.sql_insert_mode == 'INSERT IGNORE' %}selected{% endif %}>INSERT IGNORE</option>
+        </select>
+      </label>
+      <label>
+        衝突處理
+        <select name="sql_duplicate_mode">
+          <option value="無" {% if form.sql_duplicate_mode == '無' %}selected{% endif %}>無</option>
+          <option value="更新全部欄位" {% if form.sql_duplicate_mode == '更新全部欄位' %}selected{% endif %}>更新全部欄位</option>
+        </select>
+      </label>
+      <label class="inline-check">
+        <input type="checkbox" name="sql_empty_to_null" {% if form.sql_empty_to_null %}checked{% endif %} />
+        空字串轉 NULL（SQL）
+      </label>
+    </div>
+
+    <div class="actions">
+      <button type="submit" class="btn">轉換</button>
+    </div>
+  </form>
+</section>
+
+<section class="form-wrap">
+  <h3>輸出結果</h3>
+  {% if status %}
+    <p class="msg {{ status_type }}">{{ status }}</p>
+  {% endif %}
+  <p class="empty">預覽：{{ preview }}</p>
+  <textarea rows="14" readonly>{{ result }}</textarea>
+</section>
+{% endblock %}

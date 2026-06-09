@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}工作站入口 | 工作週報紀錄{% endblock %}
+{% block content %}
+<section class="form-wrap">
+  <h2>各工作站網頁入口</h2>
+  <p class="empty">點選方塊即可進入對應工作站。</p>
+</section>
+<br />
+<section class="workstation-grid">
+  
+  {% for station in stations %}
+    <details class="workstation-card workstation-detail">
+      <summary class="workstation-summary">
+        <h3>{{ station.name }}</h3>
+      </summary>
+      <div class="workstation-detail-body">
+        <p class="workstation-manage-desc">{{ station.description if station.description else '尚未填寫簡介' }}</p>
+        {% if station.work_items %}
+          <ul class="workstation-items">
+            {% for item in station.work_items %}
+              <li>{{ item }}</li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="empty">尚未設定工作項目</p>
+        {% endif %}
+        <div class="actions">
+          <a class="btn" href="{{ url_for('edit_workstation', station_id=station.id) }}">編輯</a>
+          <a class="btn" href="{{ station.url }}" target="_blank" rel="noopener noreferrer">前往</a>
+        </div>
+      </div>
+    </details>
+  {% endfor %}
+</section>
+{% endblock %}

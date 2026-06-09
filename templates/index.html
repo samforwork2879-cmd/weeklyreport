@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}首頁 | 工作週報紀錄{% endblock %}
+{% block content %}
+<section class="toolbar">
+  <form class="search-form" method="get" action="{{ url_for('index') }}">
+    <input type="text" name="q" placeholder="搜尋標題、標籤或內容關鍵字" value="{{ q }}" />
+    {% if tag %}
+      <input type="hidden" name="tag" value="{{ tag }}" />
+    {% endif %}
+    <input type="hidden" name="mode" value="{{ mode }}" />
+    <button type="submit" class="btn">搜尋</button>
+  </form>
+
+  <div class="mode-switch">
+    <a class="btn {% if mode == 'board' %}active{% endif %}" href="{{ url_for('index', q=q, tag=tag, mode='board') }}">看板模式</a>
+    <a class="btn {% if mode == 'calendar' %}active{% endif %}" href="{{ url_for('index', q=q, tag=tag, mode='calendar') }}">日曆模式</a>
+  </div>
+</section>
+
+<section class="toolbar">
+  <form class="export-form" method="get" action="{{ url_for('export_reports') }}">
+    <input type="hidden" name="q" value="{{ q }}" />
+    <input type="hidden" name="tag" value="{{ tag }}" />
+    <label>
+      起始
+      <input type="date" name="start" />
+    </label>
+    <label>
+      結束
+      <input type="date" name="end" />
+    </label>
+    <label>
+      格式
+      <select name="format">
+        <option value="md">Markdown</option>
+      </select>
+    </label>
+    <button type="submit" class="btn">匯出</button>
+  </form>
+</section>
+
+<section class="tag-cloud">
+  {% if tag %}
+    <a class="tag-link active" href="{{ url_for('index', q=q, mode=mode) }}">目前：#{{ tag }}（清除）</a>
+  {% endif %}
+  {% for tag_name, count in top_tags %}
+    <a class="tag-link" href="{{ url_for('index', q=q, mode=mode, tag=tag_name) }}">#{{ tag_name }} ({{ count }})</a>
+  {% endfor %}
+</section>
+
+{% if mode == 'calendar' %}
+  <section class="calendar-wrap" data-reports='{{ reports_json|safe }}'>
+    <div class="calendar-head">
+      <button class="btn" type="button" id="prev-month">上個月</button>
+      <h2 id="calendar-title"></h2>
+      <button class="btn" type="button" id="next-month">下個月</button>
+    </div>
+    <div id="calendar-grid" class="calendar-grid"></div>
+  </section>
+{% else %}
+  <section class="board">
+    {% if reports %}
+      {% for report in reports %}
+        <article class="card">
+          <div class="card-head">
+            <h3>{{ report.title }}</h3>
+            <span class="date">週次起始: {{ report.week_start }}</span>
+          </div>
+
+          <div class="tags">
+            {% for tag in report.tags_list %}
+              <span class="tag">#{{ tag }}</span>
+            {% endfor %}
+          </div>
+
+          <div class="markdown-body">{{ report.content_html|safe }}</div>
+
+          <div class="actions">
+            <a class="btn" href="{{ url_for('view_report', report_id=report.id) }}">檢視</a>
+            <a class="btn" href="{{ url_for('edit_report', report_id=report.id) }}">修改</a>
+            <form method="post" action="{{ url_for('delete_report', report_id=report.id) }}" onsubmit="return confirm('確定刪除這筆週報？');">
+              <button class="btn danger" type="submit">刪除</button>
+            </form>
+          </div>
+        </article>
+      {% endfor %}
+    {% else %}
+      <p class="empty">目前沒有符合條件的週報。</p>
+    {% endif %}
+  </section>
+{% endif %}
+{% endblock %}

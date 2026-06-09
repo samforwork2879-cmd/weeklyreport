@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}程式片段整理 | 工作週報紀錄{% endblock %}
+{% block content %}
+<section class="toolbar">
+  <form class="search-form" method="get" action="{{ url_for('snippets_tool') }}">
+    <input type="text" name="q" value="{{ q }}" placeholder="搜尋名稱/描述/標籤/內容" />
+    <select name="language">
+      <option value="">全部語言</option>
+      <option value="python" {% if language == 'python' %}selected{% endif %}>Python</option>
+      <option value="sql" {% if language == 'sql' %}selected{% endif %}>SQL</option>
+      <option value="csharp" {% if language == 'csharp' %}selected{% endif %}>C#</option>
+      <option value="other" {% if language == 'other' %}selected{% endif %}>其他</option>
+    </select>
+    <button type="submit" class="btn">搜尋</button>
+  </form>
+  <a class="btn" href="{{ url_for('snippets_new') }}">新增片段</a>
+</section>
+
+<section class="board">
+  {% if snippets %}
+    {% for s in snippets %}
+      <article class="card">
+        <div class="card-head">
+          <h3>{{ s.name }}</h3>
+          <span class="date">{{ s.language }}{% if s.is_custom %} / custom{% endif %}</span>
+        </div>
+        <p class="empty">{{ s.description if s.description else '無描述' }}</p>
+        <div class="tags">
+          {% for t in s.tags %}
+            <span class="tag">#{{ t }}</span>
+          {% endfor %}
+        </div>
+        <pre class="template-preview">{{ s.content }}</pre>
+        <div class="actions">
+          <a class="btn" href="{{ url_for('snippets_edit', snippet_id=s.id) }}">編輯</a>
+          <form method="post" action="{{ url_for('snippets_delete', snippet_id=s.id) }}" onsubmit="return confirm('確定刪除這個片段？');">
+            <button type="submit" class="btn danger">刪除</button>
+          </form>
+        </div>
+      </article>
+    {% endfor %}
+  {% else %}
+    <p class="empty">目前沒有符合條件的片段。</p>
+  {% endif %}
+</section>
+{% endblock %}

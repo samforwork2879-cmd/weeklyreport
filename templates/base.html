@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}工作週報紀錄{% endblock %}</title>
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem("weekly_report_theme");
+          var mode = saved === "dark" || saved === "light"
+            ? saved
+            : (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+          document.documentElement.setAttribute("data-theme", mode);
+          document.body && document.body.setAttribute("data-theme", mode);
+        } catch (e) {}
+      })();
+    </script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+Mono+TC:wght@300;400;700&display=swap" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='overrides.css') }}" />
+  </head>
+  <body>
+    <header class="header">
+      <a class="brand" href="{{ url_for('index') }}">工作週報紀錄</a>
+      <nav>
+        <a class="btn" href="{{ url_for('workstation_portal') }}">工作站入口</a>
+        <a class="btn" href="{{ url_for('manage_workstations') }}">工作站編輯</a>
+        <!-- <a class="btn" href="{{ url_for('snippets_tool') }}">片段工具</a> -->
+        <a class="btn" href="{{ url_for('string_group_tool') }}">字串分組</a>
+        <!-- <a class="btn" href="{{ url_for('manage_tags') }}">標籤管理</a> -->
+        <a class="btn" href="{{ url_for('manage_templates') }}">模板管理</a>
+        <a class="btn" href="{{ url_for('create_report') }}">新增週報</a>
+        <button type="button" class="btn theme-toggle" id="theme-toggle" aria-pressed="false">
+          深色模式
+        </button>
+      </nav>
+    </header>
+
+    <main class="container">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <section class="messages">
+            {% for category, message in messages %}
+              <div class="msg {{ category }}">{{ message }}</div>
+            {% endfor %}
+          </section>
+        {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </main>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

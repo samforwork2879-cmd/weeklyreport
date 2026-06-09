@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}標籤管理 | 工作週報紀錄{% endblock %}
+{% block content %}
+<section class="form-wrap">
+  <h2>標籤管理</h2>
+  <p class="empty">點擊標籤可回首頁直接篩選。</p>
+  <div class="tag-cloud">
+    {% for tag_name, count in tag_counts %}
+      <a class="tag-link" href="{{ url_for('index', tag=tag_name) }}">#{{ tag_name }} ({{ count }})</a>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="board">
+  <article class="card">
+    <h3>重新命名標籤</h3>
+    <form method="post" action="{{ url_for('rename_tag') }}" class="report-form">
+      <label>
+        原標籤
+        <input type="text" name="old_tag" required placeholder="例如：後端" />
+      </label>
+      <label>
+        新標籤
+        <input type="text" name="new_tag" required placeholder="例如：Backend" />
+      </label>
+      <button type="submit" class="btn">更新標籤</button>
+    </form>
+  </article>
+
+  <article class="card">
+    <h3>刪除標籤</h3>
+    <form method="post" action="{{ url_for('delete_tag') }}" class="report-form" onsubmit="return confirm('確定移除此標籤？');">
+      <label>
+        標籤名稱
+        <input type="text" name="tag" required placeholder="例如：需求討論" />
+      </label>
+      <button type="submit" class="btn danger">刪除標籤</button>
+    </form>
+  </article>
+</section>
+{% endblock %}

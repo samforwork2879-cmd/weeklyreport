@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% if action == 'new' %}
+  {% set page_title = '新增程式片段' %}
+{% else %}
+  {% set page_title = '編輯程式片段' %}
+{% endif %}
+{% block title %}{{ page_title }} | 工作週報紀錄{% endblock %}
+{% block content %}
+<section class="form-wrap">
+  <h2>{{ page_title }}</h2>
+  {% if action == 'new' %}
+    <form method="post" action="{{ url_for('snippets_new') }}" class="report-form">
+  {% else %}
+    <form method="post" action="{{ url_for('snippets_edit', snippet_id=snippet.id) }}" class="report-form">
+  {% endif %}
+    <label>
+      名稱
+      <input type="text" name="name" required value="{{ snippet.name }}" />
+    </label>
+    <label>
+      語言
+      <select name="language">
+        <option value="python" {% if snippet.language == 'python' %}selected{% endif %}>Python</option>
+        <option value="sql" {% if snippet.language == 'sql' %}selected{% endif %}>SQL</option>
+        <option value="csharp" {% if snippet.language == 'csharp' %}selected{% endif %}>C#</option>
+        <option value="other" {% if snippet.language == 'other' %}selected{% endif %}>其他</option>
+      </select>
+    </label>
+    <label>
+      標籤（逗號分隔）
+      <input type="text" name="tags_text" value="{{ snippet.tags_text }}" />
+    </label>
+    <label>
+      描述
+      <input type="text" name="description" value="{{ snippet.description }}" />
+    </label>
+    <label>
+      內容
+      <textarea name="content" rows="16" required>{{ snippet.content }}</textarea>
+    </label>
+    <div class="actions">
+      <button type="submit" class="btn">儲存</button>
+      <a class="btn" href="{{ url_for('snippets_tool') }}">返回</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

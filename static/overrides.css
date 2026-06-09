@@ -1,0 +1,25 @@
+.editor-body {
+  position: relative;
+}
+
+.editor-pane {
+  position: relative;
+}
+
+.editor-shell[data-mode="edit"] .editor-pane--preview,
+.editor-shell[data-mode="preview"] .editor-pane--editor {
+  position: absolute;
+  inset: 0;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.editor-shell[data-mode="edit"] .editor-pane--editor,
+.editor-shell[data-mode="preview"] .editor-pane--preview {
+  position: relative;
+  grid-column: 1 / -1;
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+}
